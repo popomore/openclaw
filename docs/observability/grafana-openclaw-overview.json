@@ -821,7 +821,7 @@
       "type": "barchart",
       "id": 61,
       "title": "Messages per agent [6h increase]",
-      "description": "Derived from lane name \"session:agent:<agent>:...\". Unlabeled = non-session lanes (main/nested/etc).",
+      "description": "Derived from lane name. session:agent:<agent>:... → agent id; other lanes fall back to their raw lane name (main, nested, subagent, etc).",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -835,7 +835,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (openclaw_agent) (label_replace(increase(openclaw_queue_lane_enqueue_total[6h]), \"openclaw_agent\", \"$1\", \"openclaw_lane\", \"session:agent:([^:]+):.*\")) > 0",
+          "expr": "sum by (openclaw_agent) (\n  label_replace(\n    label_replace(\n      increase(openclaw_queue_lane_enqueue_total[6h]),\n      \"openclaw_agent\", \"$1\", \"openclaw_lane\", \"^(.+)$\"\n    ),\n    \"openclaw_agent\", \"$1\", \"openclaw_lane\", \"session:agent:([^:]+):.*\"\n  )\n) > 0",
           "legendFormat": "{{openclaw_agent}}",
           "instant": true
         }
