@@ -264,7 +264,7 @@
         {
           "refId": "A",
           "legendFormat": "{{openclaw_channel}}",
-          "expr": "sum by (openclaw_channel) (rate(openclaw_message_processed_total{openclaw_outcome=\"error\", openclaw_channel=~\"$channel\"}[15m])) / clamp_min(sum by (openclaw_channel) (rate(openclaw_message_processed_total{openclaw_channel=~\"$channel\"}[15m])), 1e-9)"
+          "expr": "(sum by (openclaw_channel) (rate(openclaw_message_processed_total{openclaw_outcome=\"error\", openclaw_channel=~\"$channel\"}[15m])) or on() vector(0)) / clamp_min(sum by (openclaw_channel) (rate(openclaw_message_processed_total{openclaw_channel=~\"$channel\"}[15m])), 1e-9)"
         }
       ],
       "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0 } }
