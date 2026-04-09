@@ -1,3 +1,4 @@
+import { emitDiagnosticEvent } from "../../../infra/diagnostic-events.js";
 import { redactIdentifier } from "../../../logging/redact-identifier.js";
 import type { AuthProfileFailureReason } from "../../auth-profiles.js";
 import {
@@ -51,6 +52,16 @@ export function createFailoverDecisionLogger(
   const profileText = safeProfileId ?? "-";
   const reasonText = normalizedBase.failoverReason ?? "none";
   return (decision, extra) => {
+    emitDiagnosticEvent({
+      type: "failover.decision",
+      runId: normalizedBase.runId,
+      source: "embedded_run",
+      stage: normalizedBase.stage,
+      decision,
+      reason: normalizedBase.failoverReason ?? normalizedBase.profileFailureReason ?? undefined,
+      requestedProvider: normalizedBase.provider,
+      requestedModel: normalizedBase.model,
+    });
     const observedError = buildApiErrorObservationFields(normalizedBase.rawError);
     log.warn("embedded run failover decision", {
       event: "embedded_run_failover_decision",

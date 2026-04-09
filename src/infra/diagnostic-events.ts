@@ -65,6 +65,7 @@ export type DiagnosticMessageQueuedEvent = DiagnosticBaseEvent & {
   sessionKey?: string;
   sessionId?: string;
   channel?: string;
+  agent?: string;
   source: string;
   queueDepth?: number;
 };
@@ -72,6 +73,7 @@ export type DiagnosticMessageQueuedEvent = DiagnosticBaseEvent & {
 export type DiagnosticMessageProcessedEvent = DiagnosticBaseEvent & {
   type: "message.processed";
   channel: string;
+  agent?: string;
   messageId?: number | string;
   chatId?: number | string;
   sessionKey?: string;
@@ -122,6 +124,110 @@ export type DiagnosticRunAttemptEvent = DiagnosticBaseEvent & {
   attempt: number;
 };
 
+export type DiagnosticFailoverSource = "embedded_run" | "model_fallback";
+
+export type DiagnosticFailoverStage = "prompt" | "assistant" | "model_fallback";
+
+export type DiagnosticFailoverDecision =
+  | "rotate_profile"
+  | "fallback_model"
+  | "surface_error"
+  | "skip_candidate"
+  | "probe_cooldown_candidate"
+  | "candidate_failed"
+  | "candidate_succeeded";
+
+export type DiagnosticFailoverDecisionEvent = DiagnosticBaseEvent & {
+  type: "failover.decision";
+  sessionKey?: string;
+  sessionId?: string;
+  runId?: string;
+  source: DiagnosticFailoverSource;
+  stage: DiagnosticFailoverStage;
+  decision: DiagnosticFailoverDecision;
+  reason?: string;
+  requestedProvider?: string;
+  requestedModel?: string;
+  candidateProvider?: string;
+  candidateModel?: string;
+  nextProvider?: string;
+  nextModel?: string;
+};
+
+export type DiagnosticCompactionOutcome = "compacted" | "skipped" | "failed";
+
+export type DiagnosticCompactionRunEvent = DiagnosticBaseEvent & {
+  type: "compaction.run";
+  sessionKey?: string;
+  sessionId?: string;
+  runId?: string;
+  channel?: string;
+  agent?: string;
+  provider?: string;
+  model?: string;
+  trigger?: string;
+  outcome: DiagnosticCompactionOutcome;
+  reason?: string;
+  durationMs?: number;
+};
+
+export type DiagnosticMemoryFlushReason = "threshold" | "transcript_size";
+
+export type DiagnosticMemoryFlushOutcome = "triggered" | "completed" | "failed";
+
+export type DiagnosticMemoryFlushEvent = DiagnosticBaseEvent & {
+  type: "memory.flush";
+  sessionKey?: string;
+  sessionId?: string;
+  runId?: string;
+  channel?: string;
+  agent?: string;
+  provider?: string;
+  model?: string;
+  reason: DiagnosticMemoryFlushReason;
+  outcome: DiagnosticMemoryFlushOutcome;
+  durationMs?: number;
+};
+
+export type DiagnosticPromptOutcome = "completed" | "error" | "aborted";
+
+export type DiagnosticPromptDurationEvent = DiagnosticBaseEvent & {
+  type: "prompt.duration";
+  sessionKey?: string;
+  sessionId?: string;
+  runId?: string;
+  channel?: string;
+  agent?: string;
+  provider?: string;
+  model?: string;
+  outcome: DiagnosticPromptOutcome;
+  durationMs: number;
+};
+
+export type DiagnosticToolOutcome = "completed" | "failed";
+
+export type DiagnosticToolCallEvent = DiagnosticBaseEvent & {
+  type: "tool.call";
+  sessionKey?: string;
+  sessionId?: string;
+  runId?: string;
+  agent?: string;
+  tool: string;
+  outcome: DiagnosticToolOutcome;
+  durationMs?: number;
+};
+
+export type DiagnosticToolGapEvent = DiagnosticBaseEvent & {
+  type: "tool.gap";
+  sessionKey?: string;
+  sessionId?: string;
+  runId?: string;
+  agent?: string;
+  prevTool: string;
+  nextTool: string;
+  gapMs: number;
+};
+
 export type DiagnosticHeartbeatEvent = DiagnosticBaseEvent & {
   type: "diagnostic.heartbeat";
   webhooks: {
@@ -159,6 +265,12 @@ export type DiagnosticEventPayload =
   | DiagnosticLaneEnqueueEvent
   | DiagnosticLaneDequeueEvent
   | DiagnosticRunAttemptEvent
+  | DiagnosticFailoverDecisionEvent
+  | DiagnosticCompactionRunEvent
+  | DiagnosticMemoryFlushEvent
+  | DiagnosticPromptDurationEvent
+  | DiagnosticToolCallEvent
+  | DiagnosticToolGapEvent
   | DiagnosticHeartbeatEvent
   | DiagnosticToolLoopEvent;
 

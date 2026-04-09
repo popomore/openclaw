@@ -8,6 +8,7 @@ import {
 } from "@mariozechner/pi-coding-agent";
 import { filterHeartbeatPairs } from "../../../auto-reply/heartbeat-filter.js";
 import { resolveChannelCapabilities } from "../../../config/channel-capabilities.js";
+import { emitDiagnosticEvent } from "../../../infra/diagnostic-events.js";
 import { formatErrorMessage } from "../../../infra/errors.js";
 import { resolveHeartbeatSummaryForAgent } from "../../../infra/heartbeat-summary.js";
 import { getMachineDisplayName } from "../../../infra/machine-name.js";
@@ -1961,9 +1962,22 @@ export async function runEmbeddedAttempt(
             promptErrorSource = "prompt";
           }
         } finally {
+          const promptDurationMs = Date.now() - promptStartedAt;
           log.debug(
-            `embedded run prompt end: runId=${params.runId} sessionId=${params.sessionId} durationMs=${Date.now() - promptStartedAt}`,
+            `embedded run prompt end: runId=${params.runId} sessionId=${params.sessionId} durationMs=${promptDurationMs}`,
           );
+          emitDiagnosticEvent({
+            type: "prompt.duration",
+            sessionKey: params.sessionKey,
+            sessionId: params.sessionId,
+            runId: params.runId,
+            channel: params.messageChannel ?? params.messageProvider,
+            agent: hookAgentId,
+            provider: params.provider,
+            model: params.modelId,
+            outcome: yieldAborted || aborted ? "aborted" : promptError ? "error" : "completed",
+            durationMs: promptDurationMs,
+          });
         }
 
         // Capture snapshot before compaction wait so we have complete messages if timeout occurs

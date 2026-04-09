@@ -21,6 +21,7 @@ import {
   resolveSessionCompactionCheckpointReason,
   type CapturedCompactionCheckpointSnapshot,
 } from "../../gateway/session-compaction-checkpoints.js";
+import { emitDiagnosticEvent } from "../../infra/diagnostic-events.js";
 import { formatErrorMessage } from "../../infra/errors.js";
 import { resolveHeartbeatSummaryForAgent } from "../../infra/heartbeat-summary.js";
 import { getMachineDisplayName } from "../../infra/machine-name.js";
@@ -382,7 +383,35 @@ export async function compactEmbeddedPiSessionDirect(
   const authProfileId = resolvedCompactionTarget.authProfileId;
   let thinkLevel: ThinkLevel = params.thinkLevel ?? "off";
   const attemptedThinking = new Set<ThinkLevel>();
+  const emitCompactionRun = (args: {
+    outcome: "compacted" | "skipped" | "failed";
+    reason?: string;
+    durationMs?: number;
+  }) => {
+    emitDiagnosticEvent({
+      type: "compaction.run",
+      sessionKey: params.sessionKey,
+      sessionId: params.sessionId,
+      runId,
+      channel:
+        normalizeMessageChannel(params.messageChannel ?? params.messageProvider) ?? undefined,
+      agent: resolveSessionAgentIds({
+        sessionKey: params.sessionKey,
+        config: params.config,
+      }).sessionAgentId,
+      provider,
+      model: modelId,
+      trigger,
+      outcome: args.outcome,
+      reason: args.reason,
+      durationMs: args.durationMs ?? Date.now() - startedAt,
+    });
+  };
   const fail = (reason: string): EmbeddedPiCompactResult => {
+    emitCompactionRun({
+      outcome: "failed",
+      reason: classifyCompactionReason(reason),
+    });
     log.warn(
       `[compaction-diag] end runId=${runId} sessionKey=${params.sessionKey ?? params.sessionId} ` +
         `diagId=${diagId} trigger=${trigger} provider=${provider}/${modelId} ` +
@@ -992,6 +1021,10 @@ export async function compactEmbeddedPiSessionDirect(
           }
 
           if (!containsRealConversationMessages(session.messages)) {
+            emitCompactionRun({
+              outcome: "skipped",
+              reason: "no_real_conversation_messages",
+            });
             log.info(
               `[compaction] skipping — no real conversation messages (sessionKey=${params.sessionKey ?? params.sessionId})`,
             );
@@ -1110,6 +1143,10 @@ export async function compactEmbeddedPiSessionDirect(
                 `delta.estTokens=${typeof preMetrics.estTokens === "number" && typeof postMetrics.estTokens === "number" ? postMetrics.estTokens - preMetrics.estTokens : "unknown"}`,
             );
           }
+          emitCompactionRun({
+            outcome: "compacted",
+            durationMs: Date.now() - compactStartedAt,
+          });
           await runAfterCompactionHooks({
             hookRunner,
             sessionId: params.sessionId,
@@ -1345,17 +1382,63 @@ export async function compactEmbeddedPiSession(
             });
           }
         }
-        const result = await contextEngine.compact({
-          sessionId: params.sessionId,
-          sessionKey: params.sessionKey,
-          sessionFile: params.sessionFile,
-          tokenBudget: ceCtxInfo.tokens,
-          currentTokenCount: params.currentTokenCount,
-          compactionTarget: params.trigger === "manual" ? "threshold" : "budget",
-          customInstructions: params.customInstructions,
-          force: params.trigger === "manual",
-          runtimeContext,
-        });
+        const compactionStartedAt = Date.now();
+        const emitEngineOwnedCompactionRun = (args: {
+          outcome: "compacted" | "skipped" | "failed";
+          reason?: string;
+        }) => {
+          if (!engineOwnsCompaction) {
+            return;
+          }
+          emitDiagnosticEvent({
+            type: "compaction.run",
+            sessionKey: params.sessionKey,
+            sessionId: params.sessionId,
+            runId: params.runId ?? params.sessionId,
+            channel:
+              normalizeMessageChannel(params.messageChannel ?? params.messageProvider) ?? undefined,
+            agent: sessionAgentId,
+            provider: ceProvider,
+            model: ceModelId,
+            trigger: params.trigger,
+            outcome: args.outcome,
+            reason: args.reason,
+            durationMs: Date.now() - compactionStartedAt,
+          });
+        };
+        let result: Awaited<ReturnType<typeof contextEngine.compact>>;
+        try {
+          result = await contextEngine.compact({
+            sessionId: params.sessionId,
+            sessionKey: params.sessionKey,
+            sessionFile: params.sessionFile,
+            tokenBudget: ceCtxInfo.tokens,
+            currentTokenCount: params.currentTokenCount,
+            compactionTarget: params.trigger === "manual" ? "threshold" : "budget",
+            customInstructions: params.customInstructions,
+            force: params.trigger === "manual",
+            runtimeContext,
+          });
+        } catch (err) {
+          emitEngineOwnedCompactionRun({
+            outcome: "failed",
+            reason: classifyCompactionReason(formatErrorMessage(err)),
+          });
+          throw err;
+        }
+        emitEngineOwnedCompactionRun(
+          result.ok && result.compacted
+            ? { outcome: "compacted" }
+            : result.ok
+              ? {
+                  outcome: "skipped",
+                  reason: result.reason ? classifyCompactionReason(result.reason) : "unknown",
+                }
+              : {
+                  outcome: "failed",
+                  reason: result.reason ? classifyCompactionReason(result.reason) : "unknown",
+                },
+        );
         if (result.ok && result.compacted) {
           if (params.config && params.sessionKey && checkpointSnapshot) {
             try {

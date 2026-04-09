@@ -240,6 +240,62 @@ describe("diagnostics-otel service", () => {
       runId: "run-1",
       attempt: 2,
     });
+    emitDiagnosticEvent({
+      type: "failover.decision",
+      source: "model_fallback",
+      stage: "model_fallback",
+      decision: "candidate_failed",
+      reason: "timeout",
+      requestedProvider: "newapi",
+      requestedModel: "gpt-5.4",
+      candidateProvider: "hiyo",
+      candidateModel: "gpt-5.4",
+      nextProvider: "volcengine-plan",
+      nextModel: "glm-4.7",
+    });
+    emitDiagnosticEvent({
+      type: "compaction.run",
+      channel: "feishu",
+      agent: "main",
+      provider: "newapi",
+      model: "gpt-5.3-codex",
+      trigger: "timeout_recovery",
+      outcome: "compacted",
+      durationMs: 259_755,
+    });
+    emitDiagnosticEvent({
+      type: "memory.flush",
+      channel: "feishu",
+      agent: "main",
+      provider: "newapi",
+      model: "gpt-5.4",
+      reason: "threshold",
+      outcome: "completed",
+      durationMs: 18_000,
+    });
+    emitDiagnosticEvent({
+      type: "prompt.duration",
+      channel: "feishu",
+      agent: "main",
+      provider: "volcengine-plan",
+      model: "glm-4.7",
+      outcome: "completed",
+      durationMs: 442_055,
+    });
+    emitDiagnosticEvent({
+      type: "tool.call",
+      agent: "main",
+      tool: "feishu_bitable_update_record",
+      outcome: "completed",
+      durationMs: 1_760,
+    });
+    emitDiagnosticEvent({
+      type: "tool.gap",
+      agent: "main",
+      prevTool: "feishu_bitable_update_record",
+      nextTool: "feishu_bitable_create_record",
+      gapMs: 63_600,
+    });
 
     expect(telemetryState.counters.get("openclaw.webhook.received")?.add).toHaveBeenCalled();
     expect(
@@ -256,6 +312,19 @@ describe("diagnostics-otel service", () => {
       telemetryState.histograms.get("openclaw.session.stuck_age_ms")?.record,
     ).toHaveBeenCalled();
     expect(telemetryState.counters.get("openclaw.run.attempt")?.add).toHaveBeenCalled();
+    expect(telemetryState.counters.get("openclaw.failover")?.add).toHaveBeenCalled();
+    expect(telemetryState.counters.get("openclaw.compaction")?.add).toHaveBeenCalled();
+    expect(
+      telemetryState.histograms.get("openclaw.compaction.duration_ms")?.record,
+    ).toHaveBeenCalled();
+    expect(telemetryState.counters.get("openclaw.memory_flush")?.add).toHaveBeenCalled();
+    expect(
+      telemetryState.histograms.get("openclaw.memory_flush.duration_ms")?.record,
+    ).toHaveBeenCalled();
+    expect(telemetryState.histograms.get("openclaw.prompt.duration_ms")?.record).toHaveBeenCalled();
+    expect(telemetryState.counters.get("openclaw.tool.call")?.add).toHaveBeenCalled();
+    expect(telemetryState.histograms.get("openclaw.tool.duration_ms")?.record).toHaveBeenCalled();
+    expect(telemetryState.histograms.get("openclaw.tool.gap_ms")?.record).toHaveBeenCalled();
 
     const spanNames = telemetryState.tracer.startSpan.mock.calls.map((call) => call[0]);
     expect(spanNames).toContain("openclaw.webhook.processed");

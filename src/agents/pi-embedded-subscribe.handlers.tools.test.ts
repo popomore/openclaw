@@ -1,5 +1,6 @@
 import type { AgentEvent } from "@mariozechner/pi-agent-core";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { onDiagnosticEvent, resetDiagnosticEventsForTest } from "../infra/diagnostic-events.js";
 import type { MessagingToolSend } from "./pi-embedded-messaging.js";
 import {
   handleToolExecutionEnd,
@@ -63,6 +64,15 @@ function createTestContext(): {
 
   return { ctx, warn, onBlockReplyFlush, onAgentEvent };
 }
+
+beforeEach(() => {
+  resetDiagnosticEventsForTest();
+});
+
+afterEach(() => {
+  resetDiagnosticEventsForTest();
+  vi.restoreAllMocks();
+});
 
 describe("handleToolExecutionStart read path checks", () => {
   it("does not warn when read tool uses file_path alias", async () => {
@@ -245,6 +255,89 @@ describe("handleToolExecutionEnd mutating failure recovery", () => {
     );
 
     expect(ctx.state.lastToolError).toBeUndefined();
+  });
+});
+
+describe("tool diagnostics events", () => {
+  it("emits tool call durations and inter-tool gaps", async () => {
+    const { ctx } = createTestContext();
+    const events: Array<Record<string, unknown>> = [];
+    onDiagnosticEvent((event) => {
+      if (event.type === "tool.call" || event.type === "tool.gap") {
+        events.push(event as unknown as Record<string, unknown>);
+      }
+    });
+
+    let now = 1_000;
+    vi.spyOn(Date, "now").mockImplementation(() => now);
+
+    await handleToolExecutionStart(
+      ctx as never,
+      {
+        type: "tool_execution_start",
+        toolName: "feishu_bitable_update_record",
+        toolCallId: "tool-bitable-1",
+        args: { recordId: "rec_1" },
+      } as never,
+    );
+
+    now = 1_500;
+    await handleToolExecutionEnd(
+      ctx as never,
+      {
+        type: "tool_execution_end",
+        toolName: "feishu_bitable_update_record",
+        toolCallId: "tool-bitable-1",
+        isError: false,
+        result: { details: { status: "ok" } },
+      } as never,
+    );
+
+    now = 2_200;
+    await handleToolExecutionStart(
+      ctx as never,
+      {
+        type: "tool_execution_start",
+        toolName: "feishu_bitable_create_record",
+        toolCallId: "tool-bitable-2",
+        args: { tableId: "tbl_1" },
+      } as never,
+    );
+
+    now = 2_600;
+    await handleToolExecutionEnd(
+      ctx as never,
+      {
+        type: "tool_execution_end",
+        toolName: "feishu_bitable_create_record",
+        toolCallId: "tool-bitable-2",
+        isError: true,
+        result: { error: "boom" },
+      } as never,
+    );
+
+    expect(events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "tool.call",
+          tool: "feishu_bitable_update_record",
+          outcome: "completed",
+          durationMs: 500,
+        }),
+        expect.objectContaining({
+          type: "tool.gap",
+          prevTool: "feishu_bitable_update_record",
+          nextTool: "feishu_bitable_create_record",
+          gapMs: 700,
+        }),
+        expect.objectContaining({
+          type: "tool.call",
+          tool: "feishu_bitable_create_record",
+          outcome: "failed",
+          durationMs: 400,
+        }),
+      ]),
+    );
   });
 });
 

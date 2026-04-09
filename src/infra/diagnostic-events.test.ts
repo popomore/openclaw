@@ -87,6 +87,36 @@ describe("diagnostic-events", () => {
     expect(seen).toEqual(["webhook.received"]);
   });
 
+  it("supports newly added observability events", () => {
+    const seen: Array<{ type: string; seq: number; ts: number; gapMs?: number }> = [];
+    onDiagnosticEvent((event) => {
+      if (event.type === "tool.gap") {
+        seen.push({
+          type: event.type,
+          seq: event.seq,
+          ts: event.ts,
+          gapMs: event.gapMs,
+        });
+      }
+    });
+
+    emitDiagnosticEvent({
+      type: "tool.gap",
+      runId: "run-1",
+      prevTool: "feishu_bitable_update_record",
+      nextTool: "feishu_bitable_create_record",
+      gapMs: 42_000,
+    });
+
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toMatchObject({
+      type: "tool.gap",
+      seq: 1,
+      gapMs: 42_000,
+    });
+    expect(seen[0]?.ts).toBeTypeOf("number");
+  });
+
   it("drops recursive emissions after the guard threshold", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     let calls = 0;

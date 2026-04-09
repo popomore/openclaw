@@ -125,6 +125,7 @@ export function logMessageQueued(params: {
   sessionId?: string;
   sessionKey?: string;
   channel?: string;
+  agent?: string;
   source: string;
 }) {
   const state = getDiagnosticSessionState(params);
@@ -142,6 +143,7 @@ export function logMessageQueued(params: {
     sessionId: state.sessionId,
     sessionKey: state.sessionKey,
     channel: params.channel,
+    agent: params.agent,
     source: params.source,
     queueDepth: state.queueDepth,
   });
@@ -150,6 +152,7 @@ export function logMessageQueued(params: {
 
 export function logMessageProcessed(params: {
   channel: string;
+  agent?: string;
   messageId?: number | string;
   chatId?: number | string;
   sessionId?: string;
@@ -179,6 +182,7 @@ export function logMessageProcessed(params: {
   emitDiagnosticEvent({
     type: "message.processed",
     channel: params.channel,
+    agent: params.agent,
     chatId: params.chatId,
     messageId: params.messageId,
     sessionId: params.sessionId,

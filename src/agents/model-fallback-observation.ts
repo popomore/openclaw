@@ -1,3 +1,4 @@
+import { emitDiagnosticEvent } from "../infra/diagnostic-events.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import { sanitizeForLog } from "../terminal/ansi.js";
 import type { FallbackAttempt, ModelCandidate } from "./model-fallback.types.js";
@@ -56,6 +57,20 @@ export function logModelFallbackDecision(params: {
     : "none";
   const reasonText = params.reason ?? "unknown";
   const observedError = buildErrorObservationFields(params.error);
+  emitDiagnosticEvent({
+    type: "failover.decision",
+    runId: params.runId,
+    source: "model_fallback",
+    stage: "model_fallback",
+    decision: params.decision,
+    reason: params.reason ?? undefined,
+    requestedProvider: params.requestedProvider,
+    requestedModel: params.requestedModel,
+    candidateProvider: params.candidate.provider,
+    candidateModel: params.candidate.model,
+    nextProvider: params.nextCandidate?.provider,
+    nextModel: params.nextCandidate?.model,
+  });
   decisionLog.warn("model fallback decision", {
     event: "model_fallback_decision",
     tags: ["error_handling", "model_fallback", params.decision],

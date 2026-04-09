@@ -209,6 +209,7 @@ export async function dispatchReplyFromConfig(params: {
   const chatId = ctx.To ?? ctx.From;
   const messageId = ctx.MessageSid ?? ctx.MessageSidFirst ?? ctx.MessageSidLast;
   const sessionKey = ctx.SessionKey;
+  const agent = sessionKey ? resolveSessionAgentId({ sessionKey, config: cfg }) : undefined;
   const startTime = diagnosticsEnabled ? Date.now() : 0;
   const canTrackSession = diagnosticsEnabled && Boolean(sessionKey);
 
@@ -224,6 +225,7 @@ export async function dispatchReplyFromConfig(params: {
     }
     logMessageProcessed({
       channel,
+      agent,
       chatId,
       messageId,
       sessionKey,
@@ -238,7 +240,7 @@ export async function dispatchReplyFromConfig(params: {
     if (!canTrackSession || !sessionKey) {
       return;
     }
-    logMessageQueued({ sessionKey, channel, source: "dispatch" });
+    logMessageQueued({ sessionKey, channel, agent, source: "dispatch" });
     logSessionStateChange({
       sessionKey,
       state: "processing",

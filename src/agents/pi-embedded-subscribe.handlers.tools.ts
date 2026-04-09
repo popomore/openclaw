@@ -12,6 +12,7 @@ import {
   emitAgentItemEvent,
   emitAgentPatchSummaryEvent,
 } from "../infra/agent-events.js";
+import { emitDiagnosticEvent } from "../infra/diagnostic-events.js";
 import {
   buildExecApprovalPendingReplyPayload,
   buildExecApprovalUnavailableReplyPayload,
@@ -51,11 +52,30 @@ type ToolStartRecord = {
   args: unknown;
 };
 
+type LastCompletedToolRecord = {
+  toolName: string;
+  endedAt: number;
+};
+
 /** Track tool execution start data for after_tool_call hook. */
 const toolStartData = new Map<string, ToolStartRecord>();
+const lastCompletedToolByRun = new Map<string, LastCompletedToolRecord>();
+const MAX_TRACKED_TOOL_GAP_RUNS = 512;
 
 function buildToolStartKey(runId: string, toolCallId: string): string {
   return `${runId}:${toolCallId}`;
+}
+
+function pruneTrackedToolGapRuns(): void {
+  if (lastCompletedToolByRun.size <= MAX_TRACKED_TOOL_GAP_RUNS) {
+    return;
+  }
+  const staleRuns = [...lastCompletedToolByRun.entries()]
+    .toSorted((a, b) => a[1].endedAt - b[1].endedAt)
+    .slice(0, lastCompletedToolByRun.size - MAX_TRACKED_TOOL_GAP_RUNS);
+  for (const [runId] of staleRuns) {
+    lastCompletedToolByRun.delete(runId);
+  }
 }
 
 function isCronAddAction(args: unknown): boolean {
@@ -537,6 +557,23 @@ export function handleToolExecutionStart(
 
     // Track start time and args for after_tool_call hook.
     const startedAt = Date.now();
+    const lastCompletedTool = lastCompletedToolByRun.get(runId);
+    if (lastCompletedTool) {
+      const gapMs = startedAt - lastCompletedTool.endedAt;
+      if (gapMs > 0) {
+        emitDiagnosticEvent({
+          type: "tool.gap",
+          sessionKey: ctx.params.sessionKey,
+          sessionId: ctx.params.sessionId,
+          runId,
+          agent: ctx.params.agentId,
+          prevTool: lastCompletedTool.toolName,
+          nextTool: toolName,
+          gapMs,
+        });
+      }
+    }
+    pruneTrackedToolGapRuns();
     toolStartData.set(buildToolStartKey(runId, toolCallId), { startTime: startedAt, args });
 
     if (toolName === "read") {
@@ -1060,13 +1097,25 @@ export async function handleToolExecutionEnd(
   ctx.log.debug(
     `embedded run tool end: runId=${ctx.params.runId} tool=${toolName} toolCallId=${toolCallId}`,
   );
+  const durationMs = startData?.startTime != null ? endedAt - startData.startTime : undefined;
+  emitDiagnosticEvent({
+    type: "tool.call",
+    sessionKey: ctx.params.sessionKey,
+    sessionId: ctx.params.sessionId,
+    runId,
+    agent: ctx.params.agentId,
+    tool: toolName,
+    outcome: isToolError ? "failed" : "completed",
+    durationMs,
+  });
+  lastCompletedToolByRun.set(runId, { toolName, endedAt });
+  pruneTrackedToolGapRuns();
 
   await emitToolResultOutput({ ctx, toolName, meta, isToolError, result, sanitizedResult });
 
   // Run after_tool_call plugin hook (fire-and-forget)
   const hookRunnerAfter = ctx.hookRunner ?? getGlobalHookRunner();
   if (hookRunnerAfter?.hasHooks("after_tool_call")) {
-    const durationMs = startData?.startTime != null ? Date.now() - startData.startTime : undefined;
     const hookEvent: PluginHookAfterToolCallEvent = {
       toolName,
       params: afterToolCallArgs,

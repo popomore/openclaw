@@ -254,6 +254,50 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         unit: "1",
         description: "Run attempts",
       });
+      const failoverCounter = meter.createCounter("openclaw.failover", {
+        unit: "1",
+        description: "Failover decisions",
+      });
+      const compactionCounter = meter.createCounter("openclaw.compaction", {
+        unit: "1",
+        description: "Compaction runs by outcome",
+      });
+      const compactionDurationHistogram = meter.createHistogram("openclaw.compaction.duration_ms", {
+        unit: "ms",
+        description: "Compaction run duration",
+        advice: { explicitBucketBoundaries: latencyMsBucketBoundaries },
+      });
+      const memoryFlushCounter = meter.createCounter("openclaw.memory_flush", {
+        unit: "1",
+        description: "Memory flush runs by outcome",
+      });
+      const memoryFlushDurationHistogram = meter.createHistogram(
+        "openclaw.memory_flush.duration_ms",
+        {
+          unit: "ms",
+          description: "Memory flush duration",
+          advice: { explicitBucketBoundaries: latencyMsBucketBoundaries },
+        },
+      );
+      const promptDurationHistogram = meter.createHistogram("openclaw.prompt.duration_ms", {
+        unit: "ms",
+        description: "Prompt phase duration",
+        advice: { explicitBucketBoundaries: latencyMsBucketBoundaries },
+      });
+      const toolCallCounter = meter.createCounter("openclaw.tool.call", {
+        unit: "1",
+        description: "Tool calls by tool and outcome",
+      });
+      const toolDurationHistogram = meter.createHistogram("openclaw.tool.duration_ms", {
+        unit: "ms",
+        description: "Tool call duration",
+        advice: { explicitBucketBoundaries: latencyMsBucketBoundaries },
+      });
+      const toolGapHistogram = meter.createHistogram("openclaw.tool.gap_ms", {
+        unit: "ms",
+        description: "Gap between completed and next-started tool calls",
+        advice: { explicitBucketBoundaries: latencyMsBucketBoundaries },
+      });
 
       if (logsEnabled) {
         const logExporter = new OTLPLogExporter({
@@ -520,6 +564,7 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
       ) => {
         const attrs = {
           "openclaw.channel": evt.channel ?? "unknown",
+          "openclaw.agent": evt.agent ?? "unknown",
           "openclaw.source": evt.source ?? "unknown",
         };
         messageQueuedCounter.add(1, attrs);
@@ -545,6 +590,7 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
       ) => {
         const attrs = {
           "openclaw.channel": evt.channel ?? "unknown",
+          "openclaw.agent": evt.agent ?? "unknown",
           "openclaw.outcome": evt.outcome ?? "unknown",
         };
         messageProcessedCounter.add(1, attrs);
@@ -631,6 +677,90 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         queueDepthHistogram.record(evt.queued, { "openclaw.channel": "heartbeat" });
       };
 
+      const recordFailoverDecision = (
+        evt: Extract<DiagnosticEventPayload, { type: "failover.decision" }>,
+      ) => {
+        failoverCounter.add(1, {
+          "openclaw.failover.source": evt.source,
+          "openclaw.failover.stage": evt.stage,
+          "openclaw.failover.decision": evt.decision,
+          "openclaw.reason": evt.reason ?? "unknown",
+          "openclaw.requested.provider": evt.requestedProvider ?? "unknown",
+          "openclaw.requested.model": evt.requestedModel ?? "unknown",
+          "openclaw.candidate.provider": evt.candidateProvider ?? "unknown",
+          "openclaw.candidate.model": evt.candidateModel ?? "unknown",
+          "openclaw.next.provider": evt.nextProvider ?? "unknown",
+          "openclaw.next.model": evt.nextModel ?? "unknown",
+        });
+      };
+
+      const recordCompactionRun = (
+        evt: Extract<DiagnosticEventPayload, { type: "compaction.run" }>,
+      ) => {
+        const attrs = {
+          "openclaw.channel": evt.channel ?? "unknown",
+          "openclaw.agent": evt.agent ?? "unknown",
+          "openclaw.provider": evt.provider ?? "unknown",
+          "openclaw.model": evt.model ?? "unknown",
+          "openclaw.trigger": evt.trigger ?? "unknown",
+          "openclaw.outcome": evt.outcome,
+          "openclaw.reason": evt.reason ?? "none",
+        };
+        compactionCounter.add(1, attrs);
+        if (typeof evt.durationMs === "number") {
+          compactionDurationHistogram.record(evt.durationMs, attrs);
+        }
+      };
+
+      const recordMemoryFlush = (
+        evt: Extract<DiagnosticEventPayload, { type: "memory.flush" }>,
+      ) => {
+        const attrs = {
+          "openclaw.channel": evt.channel ?? "unknown",
+          "openclaw.agent": evt.agent ?? "unknown",
+          "openclaw.provider": evt.provider ?? "unknown",
+          "openclaw.model": evt.model ?? "unknown",
+          "openclaw.reason": evt.reason,
+          "openclaw.outcome": evt.outcome,
+        };
+        memoryFlushCounter.add(1, attrs);
+        if (typeof evt.durationMs === "number") {
+          memoryFlushDurationHistogram.record(evt.durationMs, attrs);
+        }
+      };
+
+      const recordPromptDuration = (
+        evt: Extract<DiagnosticEventPayload, { type: "prompt.duration" }>,
+      ) => {
+        promptDurationHistogram.record(evt.durationMs, {
+          "openclaw.channel": evt.channel ?? "unknown",
+          "openclaw.agent": evt.agent ?? "unknown",
+          "openclaw.provider": evt.provider ?? "unknown",
+          "openclaw.model": evt.model ?? "unknown",
+          "openclaw.outcome": evt.outcome,
+        });
+      };
+
+      const recordToolCall = (evt: Extract<DiagnosticEventPayload, { type: "tool.call" }>) => {
+        const attrs = {
+          "openclaw.agent": evt.agent ?? "unknown",
+          "openclaw.tool": evt.tool,
+          "openclaw.outcome": evt.outcome,
+        };
+        toolCallCounter.add(1, attrs);
+        if (typeof evt.durationMs === "number") {
+          toolDurationHistogram.record(evt.durationMs, attrs);
+        }
+      };
+
+      const recordToolGap = (evt: Extract<DiagnosticEventPayload, { type: "tool.gap" }>) => {
+        toolGapHistogram.record(evt.gapMs, {
+          "openclaw.agent": evt.agent ?? "unknown",
+          "openclaw.prev_tool": evt.prevTool,
+          "openclaw.next_tool": evt.nextTool,
+        });
+      };
+
       unsubscribe = onDiagnosticEvent((evt: DiagnosticEventPayload) => {
         try {
           switch (evt.type) {
@@ -666,6 +796,24 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
               return;
             case "run.attempt":
               recordRunAttempt(evt);
+              return;
+            case "failover.decision":
+              recordFailoverDecision(evt);
+              return;
+            case "compaction.run":
+              recordCompactionRun(evt);
+              return;
+            case "memory.flush":
+              recordMemoryFlush(evt);
+              return;
+            case "prompt.duration":
+              recordPromptDuration(evt);
+              return;
+            case "tool.call":
+              recordToolCall(evt);
+              return;
+            case "tool.gap":
+              recordToolGap(evt);
               return;
             case "diagnostic.heartbeat":
               recordHeartbeat(evt);

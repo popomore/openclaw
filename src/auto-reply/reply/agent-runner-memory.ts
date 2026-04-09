@@ -25,6 +25,7 @@ import {
 import { readSessionMessages } from "../../gateway/session-utils.fs.js";
 import { logVerbose } from "../../globals.js";
 import { registerAgentRunContext } from "../../infra/agent-events.js";
+import { emitDiagnosticEvent } from "../../infra/diagnostic-events.js";
 import { resolveMemoryFlushPlan } from "../../plugins/memory-state.js";
 import { normalizeOptionalString } from "../../shared/string-coerce.js";
 import type { TemplateContext } from "../templating.js";
@@ -652,9 +653,22 @@ export async function runMemoryFlushIfNeeded(params: {
     return entry ?? params.sessionEntry;
   }
 
+  const memoryFlushReason = shouldForceFlushByTranscriptSize ? "transcript_size" : "threshold";
   logVerbose(
     `memoryFlush triggered: sessionKey=${params.sessionKey} tokenCount=${tokenCountForFlush ?? "undefined"} threshold=${flushThreshold}`,
   );
+  const memoryFlushStartedAt = Date.now();
+  emitDiagnosticEvent({
+    type: "memory.flush",
+    sessionKey: params.sessionKey,
+    sessionId: params.followupRun.run.sessionId,
+    channel: params.followupRun.originatingChannel ?? params.followupRun.run.messageProvider,
+    agent: params.followupRun.run.agentId,
+    provider: params.followupRun.run.provider,
+    model: params.followupRun.run.model,
+    reason: memoryFlushReason,
+    outcome: "triggered",
+  });
 
   params.replyOperation.setPhase("memory_flushing");
   let activeSessionEntry = entry ?? params.sessionEntry;
@@ -790,8 +804,34 @@ export async function runMemoryFlushIfNeeded(params: {
         logVerbose(`failed to persist memory flush metadata: ${String(err)}`);
       }
     }
+    emitDiagnosticEvent({
+      type: "memory.flush",
+      sessionKey: params.sessionKey,
+      sessionId: params.followupRun.run.sessionId,
+      runId: flushRunId,
+      channel: params.followupRun.originatingChannel ?? params.followupRun.run.messageProvider,
+      agent: params.followupRun.run.agentId,
+      provider: params.followupRun.run.provider,
+      model: params.followupRun.run.model,
+      reason: memoryFlushReason,
+      outcome: "completed",
+      durationMs: Date.now() - memoryFlushStartedAt,
+    });
   } catch (err) {
     logVerbose(`memory flush run failed: ${String(err)}`);
+    emitDiagnosticEvent({
+      type: "memory.flush",
+      sessionKey: params.sessionKey,
+      sessionId: params.followupRun.run.sessionId,
+      runId: flushRunId,
+      channel: params.followupRun.originatingChannel ?? params.followupRun.run.messageProvider,
+      agent: params.followupRun.run.agentId,
+      provider: params.followupRun.run.provider,
+      model: params.followupRun.run.model,
+      reason: memoryFlushReason,
+      outcome: "failed",
+      durationMs: Date.now() - memoryFlushStartedAt,
+    });
   }
 
   return activeSessionEntry;
