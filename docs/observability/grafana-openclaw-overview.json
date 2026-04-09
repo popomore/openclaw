@@ -821,7 +821,7 @@
       "type": "barchart",
       "id": 61,
       "title": "Messages per agent [6h increase]",
-      "description": "Derived from lane name. session:agent:<agent>:... → agent id; other lanes fall back to their raw lane name (main, nested, subagent, etc).",
+      "description": "Session agent lanes only. Each session:agent:<agent>:<channel>:<kind>:<user> lane → agent name. System dispatch lanes (main/nested) excluded.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -835,7 +835,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (openclaw_agent) (\n  label_replace(\n    label_replace(\n      increase(openclaw_queue_lane_enqueue_total[6h]),\n      \"openclaw_agent\", \"$1\", \"openclaw_lane\", \"^(.+)$\"\n    ),\n    \"openclaw_agent\", \"$1\", \"openclaw_lane\", \"session:agent:([^:]+):.*\"\n  )\n) > 0",
+          "expr": "sum by (openclaw_agent) (\n  label_replace(\n    increase(openclaw_queue_lane_enqueue_total{openclaw_lane=~\"session:agent:.*\"}[6h]),\n    \"openclaw_agent\", \"$1\", \"openclaw_lane\", \"session:agent:([^:]+):.*\"\n  )\n) > 0",
           "legendFormat": "{{openclaw_agent}}",
           "instant": true
         }
@@ -1015,6 +1015,35 @@
               "mode": "normal"
             }
           }
+        }
+      }
+    },
+    {
+      "type": "barchart",
+      "id": 67,
+      "title": "System dispatch lanes [6h increase]",
+      "description": "Internal dispatch/system lanes: main (global dispatch for all incoming messages), nested (nested agent calls), cron (scheduled jobs), subagent (subagent invocations). These are NOT user agents — they have no channel/user labels.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 103
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "{{openclaw_lane}}",
+          "instant": true,
+          "expr": "sum by (openclaw_lane) (\n  increase(openclaw_queue_lane_enqueue_total{openclaw_lane=~\"main|nested|cron|subagent\"}[6h])\n) > 0"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
         }
       }
     }
