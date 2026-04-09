@@ -160,6 +160,23 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
       const meter = metrics.getMeter("openclaw");
       const tracer = trace.getTracer("openclaw");
 
+      // Explicit bucket boundaries for ms histograms. The OTel JS SDK default is
+      // [0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000]
+      // which caps at 10s. Agent runs, message processing, and stuck sessions
+      // routinely take minutes, so every sample would land in +Inf and
+      // histogram_quantile would get clamped to the 10s bucket ceiling. These
+      // boundaries spread from 5ms up to 30min so quantiles stay meaningful
+      // across the full latency range the gateway actually sees.
+      const latencyMsBucketBoundaries = [
+        5, 25, 100, 250, 500, 1000, 2500, 5000, 10000, 30000, 60000, 120000, 300000, 600000,
+        1800000,
+      ];
+      // Short-latency boundaries for queue wait: normally sub-second, but keep
+      // headroom up to a minute so slow lanes still bucket correctly.
+      const shortLatencyMsBucketBoundaries = [
+        1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 30000, 60000,
+      ];
+
       const tokensCounter = meter.createCounter("openclaw.tokens", {
         unit: "1",
         description: "Token usage by type",
@@ -171,6 +188,7 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
       const durationHistogram = meter.createHistogram("openclaw.run.duration_ms", {
         unit: "ms",
         description: "Agent run duration",
+        advice: { explicitBucketBoundaries: latencyMsBucketBoundaries },
       });
       const contextHistogram = meter.createHistogram("openclaw.context.tokens", {
         unit: "1",
@@ -187,6 +205,7 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
       const webhookDurationHistogram = meter.createHistogram("openclaw.webhook.duration_ms", {
         unit: "ms",
         description: "Webhook processing duration",
+        advice: { explicitBucketBoundaries: shortLatencyMsBucketBoundaries },
       });
       const messageQueuedCounter = meter.createCounter("openclaw.message.queued", {
         unit: "1",
@@ -199,6 +218,7 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
       const messageDurationHistogram = meter.createHistogram("openclaw.message.duration_ms", {
         unit: "ms",
         description: "Message processing duration",
+        advice: { explicitBucketBoundaries: latencyMsBucketBoundaries },
       });
       const queueDepthHistogram = meter.createHistogram("openclaw.queue.depth", {
         unit: "1",
@@ -207,6 +227,7 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
       const queueWaitHistogram = meter.createHistogram("openclaw.queue.wait_ms", {
         unit: "ms",
         description: "Queue wait time before execution",
+        advice: { explicitBucketBoundaries: shortLatencyMsBucketBoundaries },
       });
       const laneEnqueueCounter = meter.createCounter("openclaw.queue.lane.enqueue", {
         unit: "1",
@@ -227,6 +248,7 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
       const sessionStuckAgeHistogram = meter.createHistogram("openclaw.session.stuck_age_ms", {
         unit: "ms",
         description: "Age of stuck sessions",
+        advice: { explicitBucketBoundaries: latencyMsBucketBoundaries },
       });
       const runAttemptCounter = meter.createCounter("openclaw.run.attempt", {
         unit: "1",
