@@ -231,7 +231,7 @@
         {
           "refId": "A",
           "legendFormat": "{{openclaw_outcome}}",
-          "expr": "sum by (openclaw_outcome) (rate(openclaw_message_processed_total{openclaw_channel=~\"$channel\"}[1m]))"
+          "expr": "sum by (openclaw_outcome) (rate(openclaw_message_processed_total{openclaw_channel=~\"$channel\"}[5m]))"
         }
       ],
       "fieldConfig": {
@@ -264,7 +264,7 @@
         {
           "refId": "A",
           "legendFormat": "{{openclaw_channel}}",
-          "expr": "sum by (openclaw_channel) (rate(openclaw_message_processed_total{openclaw_outcome=\"error\", openclaw_channel=~\"$channel\"}[5m])) / clamp_min(sum by (openclaw_channel) (rate(openclaw_message_processed_total{openclaw_channel=~\"$channel\"}[5m])), 1e-9)"
+          "expr": "sum by (openclaw_channel) (rate(openclaw_message_processed_total{openclaw_outcome=\"error\", openclaw_channel=~\"$channel\"}[15m])) / clamp_min(sum by (openclaw_channel) (rate(openclaw_message_processed_total{openclaw_channel=~\"$channel\"}[15m])), 1e-9)"
         }
       ],
       "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0 } }
@@ -279,7 +279,7 @@
         {
           "refId": "A",
           "legendFormat": "{{openclaw_source}}",
-          "expr": "sum by (openclaw_source) (rate(openclaw_message_queued_total{openclaw_channel=~\"$channel\"}[1m]))"
+          "expr": "sum by (openclaw_source) (rate(openclaw_message_queued_total{openclaw_channel=~\"$channel\"}[5m]))"
         }
       ],
       "fieldConfig": { "defaults": { "unit": "ops" } }
@@ -335,12 +335,12 @@
         {
           "refId": "A",
           "legendFormat": "enqueue {{openclaw_lane}}",
-          "expr": "sum by (openclaw_lane) (rate(openclaw_queue_lane_enqueue_total{openclaw_lane=~\"$lane\"}[1m]))"
+          "expr": "sum by (openclaw_lane) (rate(openclaw_queue_lane_enqueue_total{openclaw_lane=~\"$lane\"}[5m]))"
         },
         {
           "refId": "B",
           "legendFormat": "dequeue {{openclaw_lane}}",
-          "expr": "sum by (openclaw_lane) (rate(openclaw_queue_lane_dequeue_total{openclaw_lane=~\"$lane\"}[1m]))"
+          "expr": "sum by (openclaw_lane) (rate(openclaw_queue_lane_dequeue_total{openclaw_lane=~\"$lane\"}[5m]))"
         }
       ],
       "fieldConfig": { "defaults": { "unit": "ops" } }
@@ -380,7 +380,7 @@
         {
           "refId": "A",
           "legendFormat": "{{openclaw_state}}",
-          "expr": "sum by (openclaw_state) (rate(openclaw_session_state_total[1m]))"
+          "expr": "sum by (openclaw_state) (rate(openclaw_session_state_total[5m]))"
         }
       ],
       "fieldConfig": { "defaults": { "unit": "ops" } }
@@ -436,7 +436,7 @@
         {
           "refId": "A",
           "legendFormat": "{{openclaw_token}}",
-          "expr": "sum by (openclaw_token) (rate(openclaw_tokens_total{openclaw_provider=~\"$provider\", openclaw_model=~\"$model\"}[1m]))"
+          "expr": "sum by (openclaw_token) (rate(openclaw_tokens_total{openclaw_provider=~\"$provider\", openclaw_model=~\"$model\"}[5m]))"
         }
       ],
       "fieldConfig": {
@@ -445,25 +445,10 @@
     },
     {
       "type": "timeseries",
-      "id": 52,
-      "title": "Cost USD / min by model",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 62 },
-      "targets": [
-        {
-          "refId": "A",
-          "legendFormat": "{{openclaw_provider}}/{{openclaw_model}}",
-          "expr": "60 * sum by (openclaw_provider, openclaw_model) (rate(openclaw_cost_usd_total{openclaw_provider=~\"$provider\", openclaw_model=~\"$model\"}[5m]))"
-        }
-      ],
-      "fieldConfig": { "defaults": { "unit": "currencyUSD" } }
-    },
-    {
-      "type": "timeseries",
       "id": 53,
       "title": "Cache hit ratio (cache_read / (input + cache_read))",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 70 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 62 },
       "targets": [
         {
           "refId": "A",
@@ -479,7 +464,7 @@
       "title": "Context tokens p95 (used vs limit)",
       "description": "This histogram uses unit=1, so buckets are 0..10000 tokens which fits context-window usage.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 70 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 70 },
       "targets": [
         {
           "refId": "A",
