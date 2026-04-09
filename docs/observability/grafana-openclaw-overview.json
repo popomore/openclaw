@@ -803,6 +803,220 @@
           "unit": "short"
         }
       }
+    },
+    {
+      "type": "row",
+      "id": 60,
+      "title": "Breakdowns",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 78
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "barchart",
+      "id": 61,
+      "title": "Messages per agent [6h increase]",
+      "description": "Derived from lane name \"session:agent:<agent>:...\". Unlabeled = non-session lanes (main/nested/etc).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 79
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (openclaw_agent) (label_replace(increase(openclaw_queue_lane_enqueue_total[6h]), \"openclaw_agent\", \"$1\", \"openclaw_lane\", \"session:agent:([^:]+):.*\")) > 0",
+          "legendFormat": "{{openclaw_agent}}",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "type": "piechart",
+      "id": 62,
+      "title": "Conversation kind distribution [6h]",
+      "description": "Derived from lane name. direct/group/cron. Unlabeled = non-session lanes.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 79
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (openclaw_kind) (label_replace(increase(openclaw_queue_lane_enqueue_total[6h]), \"openclaw_kind\", \"$1\", \"openclaw_lane\", \"session:agent:[^:]+:[^:]+:([^:]+):.*\")) > 0",
+          "legendFormat": "{{openclaw_kind}}",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "options": {
+        "displayLabels": ["name", "percent"],
+        "legend": {
+          "displayMode": "list",
+          "placement": "right"
+        }
+      }
+    },
+    {
+      "type": "table",
+      "id": 63,
+      "title": "Top slowest lanes [15m avg wait]",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 87
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(10, sum by (openclaw_lane) (rate(openclaw_queue_wait_ms_milliseconds_sum{openclaw_lane!=\"\"}[15m])) / clamp_min(sum by (openclaw_lane) (rate(openclaw_queue_wait_ms_milliseconds_count{openclaw_lane!=\"\"}[15m])), 1e-9))",
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        }
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": 64,
+      "title": "Top busiest lanes [15m enqueue rate]",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 87
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(10, sum by (openclaw_lane) (rate(openclaw_queue_lane_enqueue_total[15m])))",
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "id": 65,
+      "title": "Run duration avg by model [5m avg]",
+      "description": "sum/count per model. Requires diagnostics-otel with widened bucket boundaries to be accurate on long runs.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 95
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "{{openclaw_provider}}/{{openclaw_model}}",
+          "expr": "sum by (openclaw_provider, openclaw_model) (rate(openclaw_run_duration_ms_milliseconds_sum[5m])) / clamp_min(sum by (openclaw_provider, openclaw_model) (rate(openclaw_run_duration_ms_milliseconds_count[5m])), 1e-9)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 66,
+      "title": "Tokens stacked by provider/model [5m rate]",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 95
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "{{openclaw_provider}}/{{openclaw_model}}",
+          "expr": "sum by (openclaw_provider, openclaw_model) (rate(openclaw_tokens_total{openclaw_token=~\"input|output\"}[5m]))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        }
+      }
     }
   ]
 }
