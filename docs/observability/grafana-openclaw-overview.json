@@ -6,7 +6,10 @@
   "editable": true,
   "timezone": "",
   "refresh": "30s",
-  "time": { "from": "now-6h", "to": "now" },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
   "tags": ["openclaw", "observability"],
   "templating": {
     "list": [
@@ -21,7 +24,10 @@
       {
         "name": "channel",
         "type": "query",
-        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
         "query": "label_values(openclaw_message_processed_total, openclaw_channel)",
         "refresh": 2,
         "includeAll": true,
@@ -32,7 +38,10 @@
       {
         "name": "lane",
         "type": "query",
-        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
         "query": "label_values(openclaw_queue_lane_enqueue_total, openclaw_lane)",
         "refresh": 2,
         "includeAll": true,
@@ -43,7 +52,10 @@
       {
         "name": "provider",
         "type": "query",
-        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
         "query": "label_values(openclaw_tokens_total, openclaw_provider)",
         "refresh": 2,
         "includeAll": true,
@@ -54,7 +66,10 @@
       {
         "name": "model",
         "type": "query",
-        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
         "query": "label_values(openclaw_tokens_total{openclaw_provider=~\"$provider\"}, openclaw_model)",
         "refresh": 2,
         "includeAll": true,
@@ -69,7 +84,12 @@
       "type": "row",
       "id": 90,
       "title": "Diagnostics",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
       "collapsed": false,
       "panels": []
     },
@@ -78,8 +98,16 @@
       "id": 91,
       "title": "OpenClaw metric series present",
       "description": "Distinct openclaw_* metric names in Prometheus.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
       "targets": [
         {
           "refId": "A",
@@ -93,8 +121,14 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "red", "value": null },
-              { "color": "green", "value": 1 }
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
             ]
           }
         }
@@ -104,8 +138,16 @@
       "type": "table",
       "id": 92,
       "title": "Observed openclaw metric names",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 18, "x": 6, "y": 1 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 18,
+        "x": 6,
+        "y": 1
+      },
       "targets": [
         {
           "refId": "A",
@@ -115,40 +157,82 @@
         }
       ],
       "transformations": [
-        { "id": "organize", "options": { "excludeByName": { "Time": true } } },
-        { "id": "sortBy", "options": { "fields": {}, "sort": [{ "field": "__name__" }] } }
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "__name__"
+              }
+            ]
+          }
+        }
       ]
     },
-
     {
       "type": "row",
       "id": 1,
       "title": "Overview",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
       "collapsed": false,
       "panels": []
     },
     {
       "type": "stat",
       "id": 4,
-      "title": "Message avg latency (1h)",
+      "title": "Message avg latency [1h]",
       "description": "sum/count average. Histogram quantile is not usable because bucket ceiling is 10s but actual run is ~3min.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 6 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 6
+      },
       "targets": [
         {
           "refId": "A",
           "expr": "(sum(rate(openclaw_message_duration_ms_milliseconds_sum{openclaw_channel=~\"$channel\"}[1h])) / clamp_min(sum(rate(openclaw_message_duration_ms_milliseconds_count{openclaw_channel=~\"$channel\"}[1h])), 1e-9)) or on() vector(0)"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "ms", "decimals": 0 } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 0
+        }
+      }
     },
     {
       "type": "stat",
       "id": 5,
-      "title": "Stuck sessions (5m)",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 4, "x": 6, "y": 6 },
+      "title": "Stuck sessions [5m]",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 6,
+        "y": 6
+      },
       "targets": [
         {
           "refId": "A",
@@ -161,9 +245,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1 },
-              { "color": "red", "value": 5 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
             ]
           }
         }
@@ -172,61 +265,112 @@
     {
       "type": "stat",
       "id": 6,
-      "title": "Tokens / min (in+out)",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 5, "x": 10, "y": 6 },
+      "title": "Tokens / min in+out [5m]",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 10,
+        "y": 6
+      },
       "targets": [
         {
           "refId": "A",
           "expr": "60 * (sum(rate(openclaw_tokens_total{openclaw_token=~\"input|output\", openclaw_provider=~\"$provider\", openclaw_model=~\"$model\"}[5m])) or on() vector(0))"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "short", "decimals": 0 } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0
+        }
+      }
     },
     {
       "type": "stat",
       "id": 7,
-      "title": "Cost / hour (USD)",
+      "title": "Cost / hour (USD) [5m]",
       "description": "Requires provider cost table. newapi currently has none, so always 0.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 5, "x": 15, "y": 6 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 15,
+        "y": 6
+      },
       "targets": [
         {
           "refId": "A",
           "expr": "3600 * (sum(rate(openclaw_cost_usd_total{openclaw_provider=~\"$provider\", openclaw_model=~\"$model\"}[5m])) or on() vector(0))"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 3 } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 3
+        }
+      }
     },
     {
       "type": "stat",
       "id": 8,
-      "title": "Messages processed (1h)",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 6 },
+      "title": "Messages processed [1h]",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 6
+      },
       "targets": [
         {
           "refId": "A",
           "expr": "sum(increase(openclaw_message_processed_total{openclaw_channel=~\"$channel\"}[1h])) or on() vector(0)"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "short", "decimals": 0 } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0
+        }
+      }
     },
-
     {
       "type": "row",
       "id": 20,
       "title": "Message processing",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 10 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 10
+      },
       "collapsed": false,
       "panels": []
     },
     {
       "type": "timeseries",
       "id": 21,
-      "title": "Messages processed by outcome",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 11 },
+      "title": "Messages processed by outcome [5m rate]",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 11
+      },
       "targets": [
         {
           "refId": "A",
@@ -235,16 +379,31 @@
         }
       ],
       "fieldConfig": {
-        "defaults": { "unit": "ops", "custom": { "stacking": { "mode": "normal" } } }
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        }
       }
     },
     {
       "type": "timeseries",
       "id": 22,
-      "title": "Message avg latency by channel (sum/count)",
+      "title": "Message avg latency by channel [5m avg]",
       "description": "Average in ms. Histogram quantile unusable because bucket ceiling is 10s but runs take minutes.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 11 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 11
+      },
       "targets": [
         {
           "refId": "A",
@@ -252,29 +411,54 @@
           "expr": "sum by (openclaw_channel) (rate(openclaw_message_duration_ms_milliseconds_sum{openclaw_channel=~\"$channel\"}[5m])) / clamp_min(sum by (openclaw_channel) (rate(openclaw_message_duration_ms_milliseconds_count{openclaw_channel=~\"$channel\"}[5m])), 1e-9)"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "ms" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        }
+      }
     },
     {
       "type": "timeseries",
       "id": 23,
-      "title": "Message error ratio by channel",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 19 },
+      "title": "Message error ratio by channel [15m rate]",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 19
+      },
       "targets": [
         {
           "refId": "A",
           "legendFormat": "{{openclaw_channel}}",
-          "expr": "(sum by (openclaw_channel) (rate(openclaw_message_processed_total{openclaw_outcome=\"error\", openclaw_channel=~\"$channel\"}[15m])) or on() vector(0)) / clamp_min(sum by (openclaw_channel) (rate(openclaw_message_processed_total{openclaw_channel=~\"$channel\"}[15m])), 1e-9)"
+          "expr": "(sum by (openclaw_channel) (rate(openclaw_message_processed_total{openclaw_outcome=\"error\", openclaw_channel=~\"$channel\"}[15m])) or sum by (openclaw_channel) (rate(openclaw_message_processed_total{openclaw_channel=~\"$channel\"}[15m]) * 0)) / clamp_min(sum by (openclaw_channel) (rate(openclaw_message_processed_total{openclaw_channel=~\"$channel\"}[15m])), 1e-9)"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0 } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0
+        }
+      }
     },
     {
       "type": "timeseries",
       "id": 24,
-      "title": "Messages queued rate by source",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 19 },
+      "title": "Messages queued rate by source [5m rate]",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 19
+      },
       "targets": [
         {
           "refId": "A",
@@ -282,24 +466,40 @@
           "expr": "sum by (openclaw_source) (rate(openclaw_message_queued_total{openclaw_channel=~\"$channel\"}[5m]))"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "ops" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      }
     },
-
     {
       "type": "row",
       "id": 30,
       "title": "Queues",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 27 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 27
+      },
       "collapsed": false,
       "panels": []
     },
     {
       "type": "timeseries",
       "id": 31,
-      "title": "Lane queue depth avg",
+      "title": "Lane queue depth avg [5m]",
       "description": "Average depth (sum/count).",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 28 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 28
+      },
       "targets": [
         {
           "refId": "A",
@@ -307,15 +507,27 @@
           "expr": "sum by (openclaw_lane) (rate(openclaw_queue_depth_sum{openclaw_lane=~\"$lane\", openclaw_lane!=\"\"}[5m])) / clamp_min(sum by (openclaw_lane) (rate(openclaw_queue_depth_count{openclaw_lane=~\"$lane\", openclaw_lane!=\"\"}[5m])), 1e-9)"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "short" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
     },
     {
       "type": "timeseries",
       "id": 32,
-      "title": "Lane wait avg (ms)",
+      "title": "Lane wait avg [5m]",
       "description": "Average wait (sum/count). Quantile unusable under sparse traffic.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 28 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 28
+      },
       "targets": [
         {
           "refId": "A",
@@ -323,14 +535,26 @@
           "expr": "sum by (openclaw_lane) (rate(openclaw_queue_wait_ms_milliseconds_sum{openclaw_lane=~\"$lane\", openclaw_lane!=\"\"}[5m])) / clamp_min(sum by (openclaw_lane) (rate(openclaw_queue_wait_ms_milliseconds_count{openclaw_lane=~\"$lane\", openclaw_lane!=\"\"}[5m])), 1e-9)"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "ms" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        }
+      }
     },
     {
       "type": "timeseries",
       "id": 33,
-      "title": "Lane enqueue vs dequeue rate",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 36 },
+      "title": "Lane enqueue vs dequeue rate [5m]",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 36
+      },
       "targets": [
         {
           "refId": "A",
@@ -343,15 +567,27 @@
           "expr": "sum by (openclaw_lane) (rate(openclaw_queue_lane_dequeue_total{openclaw_lane=~\"$lane\"}[5m]))"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "ops" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      }
     },
     {
       "type": "timeseries",
       "id": 34,
-      "title": "Heartbeat queue depth avg",
+      "title": "Heartbeat queue depth avg [5m]",
       "description": "Average per-session queued items, sampled every heartbeat tick.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 36 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 36
+      },
       "targets": [
         {
           "refId": "A",
@@ -359,23 +595,39 @@
           "expr": "sum(rate(openclaw_queue_depth_sum{openclaw_channel=\"heartbeat\"}[5m])) / clamp_min(sum(rate(openclaw_queue_depth_count{openclaw_channel=\"heartbeat\"}[5m])), 1e-9)"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "short" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
     },
-
     {
       "type": "row",
       "id": 40,
       "title": "Sessions",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 44 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 44
+      },
       "collapsed": false,
       "panels": []
     },
     {
       "type": "timeseries",
       "id": 41,
-      "title": "Session state transitions",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 45 },
+      "title": "Session state transitions [5m rate]",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 45
+      },
       "targets": [
         {
           "refId": "A",
@@ -383,15 +635,27 @@
           "expr": "sum by (openclaw_state) (rate(openclaw_session_state_total[5m]))"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "ops" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      }
     },
     {
       "type": "timeseries",
       "id": 42,
-      "title": "Stuck session avg age (ms)",
+      "title": "Stuck session avg age [10m avg]",
       "description": "Average age of stuck sessions. Histogram quantile clamps to 10s because bucket ceiling is 10000ms.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 45 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 45
+      },
       "targets": [
         {
           "refId": "A",
@@ -399,15 +663,27 @@
           "expr": "sum(rate(openclaw_session_stuck_age_ms_milliseconds_sum[10m])) / clamp_min(sum(rate(openclaw_session_stuck_age_ms_milliseconds_count[10m])), 1e-9)"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "ms" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        }
+      }
     },
     {
       "type": "timeseries",
       "id": 44,
-      "title": "Agent run avg duration (ms)",
+      "title": "Agent run avg duration [5m avg]",
       "description": "sum/count average. Histogram quantile clamps to 10s because bucket ceiling is 10000ms but runs take minutes.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 53 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 53
+      },
       "targets": [
         {
           "refId": "A",
@@ -415,23 +691,39 @@
           "expr": "sum(rate(openclaw_run_duration_ms_milliseconds_sum[5m])) / clamp_min(sum(rate(openclaw_run_duration_ms_milliseconds_count[5m])), 1e-9)"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "ms" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        }
+      }
     },
-
     {
       "type": "row",
       "id": 50,
       "title": "Model usage & cost",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 61 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 61
+      },
       "collapsed": false,
       "panels": []
     },
     {
       "type": "timeseries",
       "id": 51,
-      "title": "Tokens / sec by type",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 62 },
+      "title": "Tokens / sec by type [5m rate]",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 62
+      },
       "targets": [
         {
           "refId": "A",
@@ -440,15 +732,30 @@
         }
       ],
       "fieldConfig": {
-        "defaults": { "unit": "short", "custom": { "stacking": { "mode": "normal" } } }
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        }
       }
     },
     {
       "type": "timeseries",
       "id": 53,
-      "title": "Cache hit ratio (cache_read / (input + cache_read))",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 62 },
+      "title": "Cache hit ratio cache_read / (input + cache_read) [5m rate]",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 62
+      },
       "targets": [
         {
           "refId": "A",
@@ -456,15 +763,29 @@
           "expr": "sum by (openclaw_model) (rate(openclaw_tokens_total{openclaw_token=\"cache_read\", openclaw_provider=~\"$provider\", openclaw_model=~\"$model\"}[5m])) / clamp_min(sum by (openclaw_model) (rate(openclaw_tokens_total{openclaw_token=~\"input|cache_read\", openclaw_provider=~\"$provider\", openclaw_model=~\"$model\"}[5m])), 1e-9)"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        }
+      }
     },
     {
       "type": "timeseries",
       "id": 54,
-      "title": "Context tokens p95 (used vs limit)",
+      "title": "Context tokens p95 used vs limit [10m rate]",
       "description": "This histogram uses unit=1, so buckets are 0..10000 tokens which fits context-window usage.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 70 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 70
+      },
       "targets": [
         {
           "refId": "A",
@@ -477,7 +798,11 @@
           "expr": "histogram_quantile(0.95, sum by (le, openclaw_model) (rate(openclaw_context_tokens_bucket{openclaw_context=\"limit\", openclaw_provider=~\"$provider\", openclaw_model=~\"$model\"}[10m])))"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "short" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
     }
   ]
 }
